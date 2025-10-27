@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy import or_, and_
-from src.models.user import db
-from src.models.cliente import Cliente
+from models.user import db
+from models.cliente import Cliente
 from datetime import datetime
 
 cliente_bp = Blueprint('cliente', __name__)
@@ -340,4 +340,3 @@ def search_clientes():
             'success': False,
             'message': f'Erro ao buscar clientes: {str(e)}'
         }), 500
-
