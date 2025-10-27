@@ -14,16 +14,16 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 
-# Inicializar Flask
-app = Flask(__name__)
-CORS(app)
-
 # Configuração do banco de dados PostgreSQL
 DATABASE_URL = 'postgresql://postgres:nPKAAUmYmYULbdWxWwHwLaHUpfmMzKmg@postgres.railway.internal:5432/railway'
 
 print(f"🔧 Configurando banco de dados PostgreSQL...")
 print(f"   Host: postgres.railway.internal")
 print(f"   Database: railway")
+
+# Inicializar Flask
+app = Flask(__name__)
+CORS(app)
 
 # Configurar Flask
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL
@@ -62,36 +62,41 @@ def index():
         'status': 'running'
     }, 200
 
-# Criar tabelas se não existirem
-with app.app_context():
-    try:
-        print("🔧 Criando tabelas no banco de dados...")
-        db.create_all()
-        print("✅ Tabelas criadas com sucesso!")
-        
-        # Verificar se existe usuário admin
-        admin = User.query.filter_by(email='admin@crm.com').first()
-        if not admin:
-            print("👤 Criando usuário admin padrão...")
-            admin = User(
-                nome='Administrador',
-                email='admin@crm.com',
-                perfil='master'
-            )
-            admin.set_password('admin123')
-            db.session.add(admin)
-            db.session.commit()
-            print("✅ Usuário admin criado!")
-            print("   Email: admin@crm.com")
-            print("   Senha: admin123")
-            print("   ⚠️  ALTERE A SENHA APÓS O PRIMEIRO LOGIN!")
-        else:
-            print("✅ Usuário admin já existe")
+# Criar tabelas e usuário admin
+def init_database():
+    """Inicializar banco de dados e criar usuário admin"""
+    with app.app_context():
+        try:
+            print("🔧 Criando tabelas no banco de dados...")
+            db.create_all()
+            print("✅ Tabelas criadas com sucesso!")
             
-    except Exception as e:
-        print(f"❌ Erro ao inicializar banco: {e}")
-        import traceback
-        traceback.print_exc()
+            # Verificar se existe usuário admin
+            admin = User.query.filter_by(email='admin@crm.com').first()
+            if not admin:
+                print("👤 Criando usuário admin padrão...")
+                admin = User(
+                    nome='Administrador',
+                    email='admin@crm.com',
+                    perfil='master'
+                )
+                admin.set_password('admin123')
+                db.session.add(admin)
+                db.session.commit()
+                print("✅ Usuário admin criado!")
+                print("   Email: admin@crm.com")
+                print("   Senha: admin123")
+                print("   ⚠️  ALTERE A SENHA APÓS O PRIMEIRO LOGIN!")
+            else:
+                print("✅ Usuário admin já existe")
+                
+        except Exception as e:
+            print(f"❌ Erro ao inicializar banco: {e}")
+            import traceback
+            traceback.print_exc()
+
+# Inicializar banco de dados
+init_database()
 
 if __name__ == '__main__':
     # Porta do Railway (ou 5000 como padrão)
@@ -109,4 +114,3 @@ if __name__ == '__main__':
         port=port,
         debug=False
     )
-
