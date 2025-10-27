@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Script de produção para o sistema CRM
-Configurado para usar PostgreSQL via DATABASE_URL
+Configurado para usar PostgreSQL via variáveis individuais do Railway
 """
 
 import os
@@ -19,20 +19,38 @@ app = Flask(__name__)
 CORS(app)
 
 # Configuração do banco de dados
-# FORÇA o uso de DATABASE_URL do ambiente (PostgreSQL do Railway)
+# Tentar múltiplas formas de obter a URL do PostgreSQL
+
+# Método 1: DATABASE_URL direta
 database_url = os.environ.get('DATABASE_URL')
 
+# Método 2: Construir a partir de variáveis individuais do Railway
 if not database_url:
-    print("❌ ERRO: DATABASE_URL não encontrada!")
-    print("Verifique se o PostgreSQL está conectado no Railway")
-    sys.exit(1)
+    pguser = os.environ.get('PGUSER')
+    pgpassword = os.environ.get('PGPASSWORD')
+    pghost = os.environ.get('PGHOST') or os.environ.get('RAILWAY_PRIVATE_DOMAIN', 'postgres.railway.internal')
+    pgport = os.environ.get('PGPORT', '5432')
+    pgdatabase = os.environ.get('PGDATABASE') or os.environ.get('POSTGRES_DB', 'railway')
+    
+    if pguser and pgpassword:
+        database_url = f"postgresql://{pguser}:{pgpassword}@{pghost}:{pgport}/{pgdatabase}"
+        print(f"✅ URL construída a partir de variáveis individuais")
+
+# Método 3: Fallback para SQLite (apenas desenvolvimento local)
+if not database_url:
+    print("⚠️  AVISO: Nenhuma configuração PostgreSQL encontrada!")
+    print("⚠️  Usando SQLite como fallback (NÃO recomendado para produção)")
+    database_url = 'sqlite:///src/database.db'
 
 # Fix para Railway: Converter postgres:// para postgresql://
 if database_url.startswith('postgres://'):
     database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-print(f"✅ Conectando ao PostgreSQL...")
-print(f"   URL: {database_url[:30]}...")  # Mostra só o início por segurança
+print(f"🔧 Configurando banco de dados...")
+print(f"   Tipo: {'PostgreSQL' if 'postgresql://' in database_url else 'SQLite'}")
+if 'postgresql://' in database_url:
+    # Mostrar apenas o início por segurança
+    print(f"   Host: {database_url.split('@')[1].split(':')[0] if '@' in database_url else 'N/A'}")
 
 # Configurar Flask
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
@@ -63,14 +81,16 @@ app.register_blueprint(feriado_bp, url_prefix='/api')
 # Rota de health check
 @app.route('/health')
 def health():
-    return {'status': 'ok', 'database': 'postgresql'}, 200
+    db_type = 'postgresql' if 'postgresql://' in database_url else 'sqlite'
+    return {'status': 'ok', 'database': db_type}, 200
 
 @app.route('/')
 def index():
+    db_type = 'PostgreSQL' if 'postgresql://' in database_url else 'SQLite'
     return {
         'message': 'CRM API - Sistema de Gestão de Clientes',
         'version': '2.0',
-        'database': 'PostgreSQL',
+        'database': db_type,
         'status': 'running'
     }, 200
 
@@ -109,10 +129,12 @@ if __name__ == '__main__':
     # Porta do Railway (ou 5000 como padrão)
     port = int(os.environ.get('PORT', 5000))
     
+    db_type = 'PostgreSQL' if 'postgresql://' in database_url else 'SQLite'
+    
     print(f"\n🚀 Iniciando servidor CRM...")
     print(f"   Porta: {port}")
     print(f"   Ambiente: {os.environ.get('FLASK_ENV', 'development')}")
-    print(f"   Banco: PostgreSQL")
+    print(f"   Banco: {db_type}")
     print(f"\n✅ Sistema pronto!\n")
     
     # Iniciar servidor
