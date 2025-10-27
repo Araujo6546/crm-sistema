@@ -1,0 +1,15 @@
+🚀 Iniciando CRM Backend em modo produção...
+📍 URL: http://localhost:5000
+✅ Debug mode: OFF
+ * Serving Flask app 'run_production'
+ * Debug mode: off
+[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://169.254.0.21:5000
+[33mPress CTRL+C to quit[0m
+127.0.0.1 - - [08/Oct/2025 07:35:08] "GET /api/agenda/stats HTTP/1.1" 200 -
+127.0.0.1 - - [08/Oct/2025 07:35:16] "GET /api/clientes/search?q=&limit=1 HTTP/1.1" 200 -
+127.0.0.1 - - [08/Oct/2025 07:35:16] "GET /api/agenda/stats HTTP/1.1" 200 -
+127.0.0.1 - - [08/Oct/2025 07:35:16] "GET /api/agenda?per_page=5 HTTP/1.1" 200 -
+127.0.0.1 - - [08/Oct/2025 07:35:21] "GET /api/clientes/search?per_page=1 HTTP/1.1" 200 -
