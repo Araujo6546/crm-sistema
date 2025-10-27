@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify, send_file
 from werkzeug.utils import secure_filename
 import os
-from src.models.cliente import Cliente
-from src.models.user import db
+from models.cliente import Cliente
+from models.user import db
 import tempfile
 from openpyxl import Workbook, load_workbook
 

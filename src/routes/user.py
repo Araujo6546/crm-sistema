@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
-from src.models.user import User, db
-from src.auth import generate_token, token_required, master_required
+from models.user import User, db
+from auth import generate_token, token_required, master_required
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime
 

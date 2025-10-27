@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from sqlalchemy import or_, and_, desc, func
-from src.models.user import db
-from src.models.cliente import Cliente
-from src.models.contato import ContatoRegistrado, TipoContato, ResultadoContato, Feriado
+from models.user import db
+from models.cliente import Cliente
+from models.contato import ContatoRegistrado, TipoContato, ResultadoContato, Feriado
 from datetime import datetime, date, timedelta
 
 contato_bp = Blueprint('contato', __name__)

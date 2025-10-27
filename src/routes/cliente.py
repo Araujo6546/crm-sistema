@@ -340,3 +340,4 @@ def search_clientes():
             'success': False,
             'message': f'Erro ao buscar clientes: {str(e)}'
         }), 500
+

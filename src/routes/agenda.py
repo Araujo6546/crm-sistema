@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify
-from src.models.user import db
-from src.models.cliente import Cliente
-from src.models.contato import ContatoRegistrado
+from models.user import db
+from models.cliente import Cliente
+from models.contato import ContatoRegistrado
 from datetime import datetime, timedelta
 from sqlalchemy import func
 
