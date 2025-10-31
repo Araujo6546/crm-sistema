@@ -1,0 +1,30 @@
+# Dockerfile otimizado para Railway com Gunicorn
+FROM python:3.11-slim
+
+# Definir diretório de trabalho
+WORKDIR /app
+
+# Copiar requirements e instalar dependências
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir gunicorn==21.2.0
+
+# Copiar código fonte
+COPY src/ ./src/
+COPY wsgi.py .
+COPY init_admin.py .
+
+# Criar script de inicialização
+RUN echo '#!/bin/bash\n\
+echo "🔧 Inicializando sistema CRM..."\n\
+python init_admin.py\n\
+echo "🚀 Iniciando Gunicorn..."\n\
+exec gunicorn --bind 0.0.0.0:$PORT --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile - wsgi:app\n\
+' > /app/start.sh && chmod +x /app/start.sh
+
+# Expor porta
+EXPOSE 8080
+
+# Comando de inicialização
+CMD ["/app/start.sh"]
+
