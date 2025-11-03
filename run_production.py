@@ -1,48 +1,35 @@
 #!/usr/bin/env python3
 """
 Script de produção que inicia Gunicorn programaticamente
-Cria admin automaticamente antes de iniciar o servidor
+Usa a instância correta de app e db do main.py
 """
 
 import os
 import sys
 import subprocess
 
-# Adicionar diretório src ao path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
-
-# Configuração do banco de dados
+# Configuração do banco de dados ANTES de importar qualquer coisa
 os.environ['DATABASE_URL'] = 'postgresql://postgres:nPKAAUmYmYULbdWxWwHwLaHUpfmMzKmg@postgres.railway.internal:5432/railway'
 os.environ['FLASK_ENV'] = 'production'
+
+# Adicionar diretório raiz ao path
+sys.path.insert(0, os.path.dirname(__file__))
 
 print("=" * 70)
 print("🚀 INICIANDO SISTEMA CRM - MODO PRODUÇÃO")
 print("=" * 70)
 
-# Etapa 1: Criar tabelas e admin
+# Etapa 1: Criar admin usando a instância correta de app e db
 print("\n📊 ETAPA 1: Configuração do Banco de Dados")
 print("-" * 70)
 
 try:
-    from flask import Flask
-    from flask_sqlalchemy import SQLAlchemy
-    
-    # Criar app Flask temporário
-    app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
-    
-    # Inicializar SQLAlchemy
-    db = SQLAlchemy(app)
-    
-    # Importar modelos
-    from models.user import User
-    from models.cliente import Cliente
-    from models.contato import ContatoRegistrado, TipoContato, ResultadoContato
+    # Importar app e db do main.py (instância correta)
+    from src.main import app, db
+    from src.models.user import User
     
     with app.app_context():
-        # Criar tabelas
+        # Criar tabelas (já está no main.py mas garantir)
         print("📝 Criando tabelas no PostgreSQL...")
         db.create_all()
         print("✅ Tabelas criadas com sucesso!")
@@ -118,7 +105,7 @@ except Exception as e:
     print("\n⚠️  Tentando iniciar com Flask development server como fallback...")
     
     # Fallback para Flask development server
-    from main import app as flask_app
+    from src.main import app as flask_app
     flask_app.run(
         host='0.0.0.0',
         port=int(port),
