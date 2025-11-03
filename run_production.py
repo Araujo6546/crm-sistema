@@ -1,90 +1,126 @@
 #!/usr/bin/env python3
 """
-Script de produção para o sistema CRM
-Configurado para PostgreSQL do Railway
+Script de produção que inicia Gunicorn programaticamente
+Cria admin automaticamente antes de iniciar o servidor
 """
 
 import os
 import sys
+import subprocess
 
 # Adicionar diretório src ao path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-# Configuração do banco de dados PostgreSQL
+# Configuração do banco de dados
 os.environ['DATABASE_URL'] = 'postgresql://postgres:nPKAAUmYmYULbdWxWwHwLaHUpfmMzKmg@postgres.railway.internal:5432/railway'
+os.environ['FLASK_ENV'] = 'production'
 
-print(f"🔧 Configurando banco de dados PostgreSQL...")
-print(f"   Host: postgres.railway.internal")
-print(f"   Database: railway")
+print("=" * 70)
+print("🚀 INICIANDO SISTEMA CRM - MODO PRODUÇÃO")
+print("=" * 70)
 
-# Importar main do Flask
-from main import app, db
+# Etapa 1: Criar tabelas e admin
+print("\n📊 ETAPA 1: Configuração do Banco de Dados")
+print("-" * 70)
 
-# Rota para criar admin manualmente
-@app.route('/api/setup-admin', methods=['POST'])
-def setup_admin():
-    """Criar usuário admin (use apenas uma vez)"""
-    from models.user import User
-    from flask import jsonify, request
+try:
+    from flask import Flask
+    from flask_sqlalchemy import SQLAlchemy
     
-    try:
-        # Verificar se já existe admin
-        admin = User.query.filter_by(email='admin@crm.com').first()
-        if admin:
-            return jsonify({
-                'success': False,
-                'message': 'Usuário admin já existe'
-            }), 400
-        
-        # Criar admin
-        admin = User(
-            nome='Administrador',
-            email='admin@crm.com',
-            perfil='master'
-        )
-        admin.set_password('admin123')
-        db.session.add(admin)
-        db.session.commit()
-        
-        return jsonify({
-            'success': True,
-            'message': 'Usuário admin criado com sucesso!',
-            'email': 'admin@crm.com',
-            'senha': 'admin123',
-            'aviso': 'ALTERE A SENHA APÓS O PRIMEIRO LOGIN!'
-        }), 201
-        
-    except Exception as e:
-        db.session.rollback()
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-# Criar tabelas
-with app.app_context():
-    try:
-        print("🔧 Criando tabelas no banco de dados...")
+    # Criar app Flask temporário
+    app = Flask(__name__)
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ['DATABASE_URL']
+    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    
+    # Inicializar SQLAlchemy
+    db = SQLAlchemy(app)
+    
+    # Importar modelos
+    from models.user import User
+    from models.cliente import Cliente
+    from models.contato import ContatoRegistrado, TipoContato, ResultadoContato
+    
+    with app.app_context():
+        # Criar tabelas
+        print("📝 Criando tabelas no PostgreSQL...")
         db.create_all()
         print("✅ Tabelas criadas com sucesso!")
-    except Exception as e:
-        print(f"❌ Erro ao criar tabelas: {e}")
+        
+        # Verificar/criar admin
+        print("\n👤 Verificando usuário admin...")
+        admin = User.query.filter_by(email='admin@crm.com').first()
+        
+        if admin:
+            print("✅ Usuário admin já existe")
+        else:
+            print("📝 Criando usuário admin...")
+            admin = User(
+                nome='Administrador',
+                email='admin@crm.com',
+                perfil='master'
+            )
+            admin.set_password('admin123')
+            db.session.add(admin)
+            db.session.commit()
+            print("✅ Usuário admin criado com sucesso!")
+            print("   📧 Email: admin@crm.com")
+            print("   🔑 Senha: admin123")
+            print("   ⚠️  ALTERE A SENHA APÓS O PRIMEIRO LOGIN!")
+        
+        print("\n" + "=" * 70)
+        print("✅ CONFIGURAÇÃO DO BANCO CONCLUÍDA!")
+        print("=" * 70)
+        
+except Exception as e:
+    print(f"\n❌ ERRO NA CONFIGURAÇÃO: {e}")
+    import traceback
+    traceback.print_exc()
+    print("\n⚠️  Tentando continuar...\n")
 
-if __name__ == '__main__':
-    # Porta do Railway (ou 5000 como padrão)
-    port = int(os.environ.get('PORT', 5000))
+# Etapa 2: Iniciar Gunicorn
+print("\n🚀 ETAPA 2: Iniciando Servidor Gunicorn")
+print("-" * 70)
+
+port = os.environ.get('PORT', '8080')
+
+print(f"📡 Porta: {port}")
+print(f"🔧 Workers: 2")
+print(f"🔧 Threads por worker: 4")
+print(f"🔧 Timeout: 120s")
+print(f"💾 Banco: PostgreSQL")
+print()
+
+# Comando Gunicorn
+gunicorn_cmd = [
+    'gunicorn',
+    '--bind', f'0.0.0.0:{port}',
+    '--workers', '2',
+    '--threads', '4',
+    '--timeout', '120',
+    '--access-logfile', '-',
+    '--error-logfile', '-',
+    '--log-level', 'info',
+    'wsgi:app'
+]
+
+print(f"🎯 Executando: {' '.join(gunicorn_cmd)}")
+print("=" * 70)
+print()
+
+# Executar Gunicorn
+try:
+    subprocess.run(gunicorn_cmd, check=True)
+except KeyboardInterrupt:
+    print("\n\n⚠️  Servidor interrompido pelo usuário")
+except Exception as e:
+    print(f"\n\n❌ ERRO ao iniciar Gunicorn: {e}")
+    print("\n⚠️  Tentando iniciar com Flask development server como fallback...")
     
-    print(f"\n🚀 Iniciando servidor CRM...")
-    print(f"   Porta: {port}")
-    print(f"   Ambiente: {os.environ.get('FLASK_ENV', 'production')}")
-    print(f"   Banco: PostgreSQL")
-    print(f"\n✅ Sistema pronto!")
-    print(f"\n📝 Para criar o usuário admin, acesse:")
-    print(f"   POST /api/setup-admin\n")
-    
-    # Iniciar servidor
-    app.run(
+    # Fallback para Flask development server
+    from main import app as flask_app
+    flask_app.run(
         host='0.0.0.0',
-        port=port,
+        port=int(port),
         debug=False
     )
